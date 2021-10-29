@@ -1,167 +1,174 @@
 # Image to LaTeX
 
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/kingyiusuen/image-to-latex/blob/main/.pre-commit-config.yaml)
-[![License](https://img.shields.io/github/license/kingyiusuen/image-to-latex)](https://github.com/kingyiusuen/image-to-latex/blob/main/LICENSE)
-
-An application that maps an image of a LaTeX math equation to LaTeX code.
-
+图片转Latext公式
 <img src="figures/screenshot.gif" alt="Image to Latex streamlit app" width="512">
 
-## Introduction
+## 简介
 
-The problem of image-to-markup generation was attempted by [Deng et al. (2016)](https://arxiv.org/pdf/1609.04938v1.pdf). They extracted about 100K formulas by parsing LaTeX sources of papers from the arXiv. They rendered the formulas using pdflatex and converted the rendered PDF files to PNG format. The raw and preprocessed versions of their dataset are available [online](http://lstm.seas.harvard.edu/latex/data/). In their model, a CNN is first used to extract image features. The rows of the features are then encoded using a RNN. Finally, the encoded features are used by an RNN decoder with an attention mechanism. The model has 9.48 million parameters in total. Recently, Transformer has overtaken RNN for many language tasks, so I thought I might give it try in this problem.
+Deng等人（2016）]（https://arxiv.org/pdf/1609.04938v1.pdf）尝试了从图像到markup的生成问题。他们通过解析arXiv上的LaTeX论文来源，提取了大约100K的公式。他们使用pdflatex渲染公式，并将渲染后的PDF文件转换为PNG格式。他们的数据集的原始版本和预处理版本都可以得到[在线](http://lstm.seas.harvard.edu/latex/data/)。在他们的模型中，首先使用一个CNN来提取图像特征。然后用RNN对这些特征的行进行编码。最后，编码后的特征被一个带有注意力机制的RNN解码器使用。该模型总共有948万个参数。最近，Transformer在许多语言任务中已经超越了RNN，所以我想我可以在这个问题上试一试。
 
-## Methods
+## 方法
 
-Using their dataset, I trained a model that uses ResNet-18 as encoder with 2D positional encoding and a Transformer as decoder with cross-entropy loss. (Similar to the one described in [Singh et al. (2021)](https://arxiv.org/pdf/2103.06450.pdf), except that I used ResNet only up to block 3 to reduce computational costs, and I excluded the line number encoding as it doesn't apply to this problem.) The model has about 3 million parameters.
+使用他们的数据集，我训练了一个模型，使用ResNet-18作为编码器，采用二维位置编码，使用Transformer作为解码器，采用交叉熵损失。
+(与[Singh等人(2021)](https://arxiv.org/pdf/2103.06450.pdf)中描述的相似，只是我只使用了ResNet到第3块以减少计算成本，而且我排除了数字编码，因为它不适用于这个问题）。该模型有大约300万个参数。
 
 <img src="figures/model_architecture.png" alt="Model Architecture" width="384">
 
 <small>Model architecture. Taken from Singh et al. (2021).</small>
 
-Initially, I used the preprocessed dataset to train my model, because the preprocessed images are downsampled to half of their original sizes for efficiency, and are grouped and padded into similar sizes to facilitate batching. However, this rigid preprocessing turned out to be a huge limitation. Although the model could achieve a reasonable performance on the test set (which was preprocessed the same way as the training set), it did not generalize well to images outside the dataset, most likely because the image quality, padding, and font size are so different from the images in the dataset. This phenomenon has also been observed by others who have attempted the same problem using the same dataset (e.g., [this project](https://wandb.ai/site/articles/image-to-latex), [this issue](https://github.com/harvardnlp/im2markup/issues/12) and [this issue](https://github.com/harvardnlp/im2markup/issues/21)).
+最初，我使用预处理的数据集来训练我的模型，因为为了提高效率，预处理的图像被降到原始尺寸的一半，
+并被分组和填充成类似的尺寸，以方便批次。然而，这种僵化的预处理被证明是一个巨大的限制。
+尽管该模型在测试集（与训练集的预处理方式相同）上可以达到合理的性能，但它对数据集以外的图像没有很好的概括性，
+很可能是因为图像质量、填充和字体大小与数据集中的图像有很大不同。
+其他使用相同数据集尝试相同问题的人也观察到了这种现象（例如，[本项目](https://wandb.ai/site/articles/image-to-latex)、[this issue](https://github.com/harvardnlp/im2markup/issues/12)和[this issue](https://github.com/harvardnlp/im2markup/issues/21)）。
 
-To this end, I used the raw dataset and included image augmentation (e.g. random scaling, gaussian noise) in my data processing pipeline to increase the diversity of the samples. Moreover, unlike Deng et al. (2016), I did not group images by size. Rather, I sampled them uniformly and padded them to the size of the largest image in the batch, so that the model must learn how to adapt to different padding sizes.
+为此，我使用了原始数据集，并在我的数据处理pipeline中加入了图像增强（例如随机缩放、高斯噪声），
+以增加样本的多样性。此外，与Deng等人（2016）不同的是，我没有按大小对图像进行分组。
+相反，我对它们进行了统一采样，并将它们填充到批次中最大的图像的大小，这样，模型必须学会如何适应不同的填充大小。
 
-Additional problems that I faced in the dataset:
-- Some latex code produces visually identical outputs (e.g. `\left(` and `\right)` look the same as `(` and `)`), so I normalized them.
-- Some latex code is used to add space (e.g. `\vspace{2px}` and `\hspace{0.3mm}`). However, the length of the space is diffcult to judge even for humans. Also, there are many ways to express the same spacing (e.g. 1 cm = 10 mm). Finally, I don't want the model to generate code on blank images, so I removed them. (I only removed `\vspace` and `\hspace`, but turns out there are a lot of commands for horizontal spacing. I only realized that during error analysis. See below.)
+我在数据集中遇到的其他问题。
+- 一些latex代码产生了视觉上相同的输出（例如：`left(`和`right)`看起来和`(`和`)`一样），所以我把它们归一化了。
+- 一些latex代码被用来添加空格（例如``vspace{2px}`和`hspace{0.3mm}`）。
+  然而，空间的长度即使对人类来说也是难以判断的。而且，有很多方法来表达相同的间距（例如，1厘米=10毫米）。
+  最后，我不希望模型在空白图像上生成代码，所以我删除了它们。
+  我只删除了`vspace`和`hspace`，但事实证明有很多命令用于水平间距。我在错误分析中才意识到这一点。见下文。
 
 ## Results
 
-The [best run](https://wandb.ai/kingyiusuen/image-to-latex/runs/1w1abmg1/) has a character error rate (CER) of 0.17 in test set. Here is an example from the test dataset:
+[best run]](https://wandb.ai/kingyiusuen/image-to-latex/runs/1w1abmg1/)在测试集的字符错误率(CER)为0.17。下面是测试数据集中的一个例子。
 
 <img width="480" src="https://user-images.githubusercontent.com/14181114/131140417-38d2e647-8316-41d5-9b81-583ecd2668a0.png">
 
-- The input image and the model prediction look identical. But in the ground truth label, the horizontal spacing was created using `~`, whereas the model used `\,`, so this was still counted as an error.
+- 输入的图像和模型的预测看起来是一样的。但是在ground truth标签中，水平间隔是用`~`创建的，而模型使用的是`\`，所以这仍然被算作一个错误。
 
-I also took some screenshots in some random Wikipedia articles to see whether the model generalizes to images outside of the dataset:
+我还在一些随机的维基百科文章中拍了一些截图，看看这个模型是否能推广到数据集之外的图像。
 
 <img width="480" alt="Screen Shot 2021-08-27 at 8 06 54 AM" src="https://user-images.githubusercontent.com/14181114/131131947-fd857bd6-17e9-4a00-87d0-6ba04442c730.png">
 
-- The model output is actually correct but for some reason Streamlit can't render code with `\cal`.
+- 模型的输出实际上是正确的，但是由于某些原因，Streamlit不能用`\cal`渲染代码。
 
 <img width="480" src="https://user-images.githubusercontent.com/14181114/131130008-867e7373-67cb-44fb-abdb-b2eb2b6d6dd9.png">
 
-- Incorrectly bolded some of the symbols.
+- 错误地加粗了一些符号。
 
-The model also seems to have some trouble when the image is larger than what those in the dataset. Perhaps I should have increased the range of rescaling factor in the data augmentation process.
+当图像大于数据集中的那些图像时，模型似乎也有一些问题。也许我应该在数据增强的过程中增加重新缩放系数的范围。
 
-## Discussion
+## 讨论
 
-I think I should have defined the scope of the project better:
+我想我应该更好地界定项目的范围。
 
-- Do I want the model to tell the difference between regular-sized and large parentheses (e.g. `(`, `\big(`, `\Big(`, `\bigg(`, `\Bigg(`)?
-- Do I want the model to recognize horizontal and vertical spacing? (There are [over 40 commands for horizontal spacing](https://tex.stackexchange.com/a/74354).)
-- Do I want to the model to recognize different font styles? (Here is [a list of available font style in LaTex](https://tex.stackexchange.com/a/58124).)
-- etc.
+- 我想让模型区分普通大小的括号和大括号（例如：`(`, `\big(`, `\Big(`, `\bigg(`, `\Bigg(`)）？
+- 我想让模型识别水平和垂直间距吗？(有[40多个关于水平间距的命令](https://tex.stackexchange.com/a/74354)。)
+- 我想让模型识别不同的字体风格吗？(这里有[LaTex中可用的字体样式列表](https://tex.stackexchange.com/a/58124)。)
+- 等等。
 
-These questions should be used to guide the data cleaning process.
+这些问题应被用来指导数据清理过程。
 
-I found a pretty established tool called [Mathpix Snip](https://mathpix.com/) that converts handwritten formulas into LaTex code. Its [vocabulary size](https://docs.mathpix.com/#vocabulary) is around 200. Excluding numbers and English letters, the number of LaTex commands it can produce is actually just above 100. (The vocabulary size of im2latex-100k is almost 500). It only includes two horizontal spacing commands (`\quad` and `\qquad`), and it doesn't recognize different sizes of parentheses. Perphas confining to a limited set of vocabulary is what I should have done, since there are so many ambiguities in real-world LaTeX.
+我发现了一个相当成熟的工具，叫做[Mathpix Snip](https://mathpix.com/)，
+可以将手写的公式转换为LaTex代码。它的[vocabulary size](https://docs.mathpix.com/#vocabulary)约为200。
+不包括数字和英文字母，它能产生的LaTex命令的数量实际上刚刚超过100。(im2latex-100k的单词表量差不多是500）。
+它只包括两个水平间距命令（`quad'和`qquad'），而且它不能识别不同大小的括号。
+Perphas限制在一组有限的单词表中是我应该做的，因为现实世界中的LaTeX有太多的模糊之处。
 
-Obvious possible improvements of this work include (1) training the model for more epochs (for the sake of time, I only trained the model for 15 epochs, but the validation loss is still going down), (2) using beam search (I only implemented greedy search), (3) using a larger model (e.g., use ResNet-34 instead of ResNet-18) and doing some hyperparameter tuning. I didn't do any of these, because I had limited computational resources (I was using Google Colab). But ultimately, I believe having data that don't have ambiguous labels and doing more data augmentation are the keys to the success of this problem.
+这项工作明显可能的改进包括：（1）对模型进行更多的epoch训练（为了节省时间，我只训练了15个epoch，但验证损失仍在下降），
+（2）使用beam search（我只实现了贪婪搜索），
+（3）使用更大的模型（例如，使用ResNet-34而不是ResNet-18）并做一些超参数调整。
+我没有做这些，因为我的计算资源有限（我使用的是谷歌Colab）。但最终，我相信拥有没有模糊标签的数据和做更多的数据增量是这个问题成功的关键。
 
-The model performacne is not as good as I want to be, but I hope the lessons I learned from this project are useful to someone wants to tackle similar problems in the future.
+模型的表现并不尽如人意，但我希望我从这个项目中学到的经验对将来想解决类似问题的人有用。
 
-## How To Use
+## 怎样使用
 
-### Setup
+### 设置
 
-Clone the repository to your computer and position your command line inside the repository folder:
+克隆版本库到你的电脑上，把你的命令行放在版本库文件夹内。
 
 ```
 git clone https://github.com/kingyiusuen/image-to-latex.git
 cd image-to-latex
 ```
-
-Then, create a virtual environment named `venv` and install required packages:
+然后，创建一个名为 "venv "的虚拟环境并安装所需的软件包。
 
 ```
 make venv
 make install-dev
 ```
 
-### Data Preprocessing
+### 数据预处理
 
-Run the following command to download the im2latex-100k dataset and do all the preprocessing. (The image cropping step may take over an hour.)
+运行以下命令，下载im2latex-100k数据集并进行所有的预处理。(图像裁剪步可能需要一个多小时。)
 
 ```
 python scripts/prepare_data.py
 ```
 
-### Model Training and Experiment Tracking
+### 模型训练和实验跟踪
 
-#### Model Training
+#### 模型训练
 
-An example command to start a training session:
+训练命令
 
 ```
 python scripts/run_experiment.py trainer.gpus=1 data.batch_size=32
 ```
 
-Configurations can be modified in `conf/config.yaml` or in command line. See [Hydra's documentation](https://hydra.cc/docs/intro) to learn more.
+配置可以在`conf/config.yaml`或命令行中修改。参见[Hydra的文档](https://hydra.cc/docs/intro)以了解更多。
 
-#### Experiment Tracking using Weights & Biases
+#### 使用权重和偏差进行实验跟踪
 
-The best model checkpoint will be uploaded to Weights & Biases (W&B) automatically (you will be asked to register or login to W&B before the training starts). Here is an example command to download a trained model checkpoint from W&B:
+最好的模型checkpoint将被自动上传到Weights & Biases (W&B)（在训练开始前，你将被要求注册或登录W&B）。下面是一个从W&B下载训练过的模型checkpoint的命令样本。
 
 ```
 python scripts/download_checkpoint.py RUN_PATH
 ```
+用你的运行路径替换RUN_PATH。运行路径的格式应该是`<entity>/<project>/<run_id>`。要找到一个特定实验运行的运行路径，请到仪表板的Overview选项卡。
 
-Replace RUN_PATH with the path of your run. The run path should be in the format of `<entity>/<project>/<run_id>`. To find the run path for a particular experiment run, go to the Overview tab in the dashboard.
-
-For example, you can use the following command to download my best run
+例如，你可以使用以下命令来下载我的最佳运行状态的checkpoint
 
 ```
 python scripts/download_checkpoint.py kingyiusuen/image-to-latex/1w1abmg1
 ```
+checkpoint将被下载到项目目录下一个名为`artifacts`的文件夹。
 
-The checkpoint will be downloaded to a folder named `artifacts` under the project directory.
+### 测试和持续集成
 
-### Testing and Continuous Integration
+以下工具被用来对代码库进行润色。
 
-The following tools are used to lint the codebase:
+`isort`: 对Python脚本中的导入语句进行排序和格式化。
 
-`isort`: Sorts and formats import statements in Python scripts.
+`black`: 一个遵守PEP8的代码格式化器。
 
-`black`: A code formatter that adheres to PEP8.
+`flake8`: 一个报告Python脚本stylistic问题的代码linter。
 
-`flake8`: A code linter that reports stylistic problems in Python scripts.
+`mypy`: 在Python脚本中执行静态类型检查。
 
-`mypy`: Performs static type checking in Python scripts.
-
-Use the following command to run all the checkers and formatters:
+使用以下命令来运行所有的检查器和格式化器。
 
 ```
 make lint
 ```
 
-See `pyproject.toml` and `setup.cfg` at the root directory for their configurations.
+它们的配置见根目录下的`pyproject.toml`和`setup.cfg`。
 
-Similar checks are done automatically by the pre-commit framework when a commit is made. Check out `.pre-commit-config.yaml` for the configurations.
+当提交时，预提交框架会自动进行类似的检查。请查看`.pre-commit-config.yaml`的配置。
 
-### Deployment
+### 部署
 
-An API is created to make predictions using the trained model. Use the following command to get the server up and running:
+创建了一个API来使用训练好的模型进行预测。使用下面的命令来启动和运行服务器。
 
 ```
 make api
 ```
 
-You can explore the API via the generated documentation at http://0.0.0.0:8000/docs.
-
-To run the Streamlit app, create a new terminal window and use the following command:
-
+你可以通过生成的文档（http://0.0.0.0:8000/docs）探索该API。
+要运行Streamlit应用程序，创建一个新的终端窗口并使用以下命令。
 ```
 make streamlit
 ```
+该应用程序应在你的浏览器中自动打开。你也可以通过访问[http://localhost:8501]（http://localhost:8501）来打开它。
+为了使该应用程序工作，你需要下载一个实验运行的artifacts（见上文），并使API启动和运行。
 
-The app should be opened in your browser automatically. You can also open it by visiting [http://localhost:8501](http://localhost:8501). For the app to work, you need to download the artifacts of an experiment run (see above) and have the API up and running.
-
-To create a Docker image for the API:
+要为API创建一个Docker镜像。
 
 ```
 make docker
