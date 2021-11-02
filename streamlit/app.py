@@ -4,14 +4,14 @@ from PIL import Image
 import streamlit as st
 
 
-st.set_page_config(page_title="Image To Latex Converter")
+st.set_page_config(page_title="图片转换到Latex")
 
 
-st.title("Image to Latex Converter")
+st.title("图片转换到Latex页面")
 
 
 uploaded_file = st.file_uploader(
-    "Upload an image of latex math equation",
+    "请上传一张包含latext的图片",
     type=["png", "jpg"],
 )
 
@@ -24,7 +24,7 @@ if uploaded_file is not None:
 if st.button("Convert"):
     if uploaded_file is not None and image is not None:
         files = {"file": uploaded_file.getvalue()}
-        with st.spinner("Wait for it..."):
+        with st.spinner("开始转换..."):
             response = requests.post("http://0.0.0.0:8000/predict/", files=files)
         latex_code = response.json()["data"]["pred"]
         st.code(latex_code)

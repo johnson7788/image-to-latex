@@ -18,7 +18,7 @@ app = FastAPI(
 async def load_model():
     global lit_model
     global transform
-    lit_model = LitResNetTransformer.load_from_checkpoint("artifacts/model.pt")
+    lit_model = LitResNetTransformer.load_from_checkpoint("artifacts/my_train.pt")
     lit_model.freeze()
     transform = ToTensorV2()
 

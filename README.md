@@ -162,12 +162,16 @@ make lint
 
 ```
 make api
+或者
+uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload --reload-dir image_to_latex --reload-dir api
 ```
 
 你可以通过生成的文档（http://0.0.0.0:8000/docs）探索该API。
 要运行Streamlit应用程序，创建一个新的终端窗口并使用以下命令。
 ```
 make streamlit
+# 或者
+streamlit run streamlit/app.py
 ```
 该应用程序应在你的浏览器中自动打开。你也可以通过访问[http://localhost:8501]（http://localhost:8501）来打开它。
 为了使该应用程序工作，你需要下载一个实验运行的artifacts（见上文），并使API启动和运行。
