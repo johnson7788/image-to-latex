@@ -113,6 +113,10 @@ python scripts/run_experiment.py trainer.gpus=1 data.batch_size=32
 ```
 
 配置可以在`conf/config.yaml`或命令行中修改。参见[Hydra的文档](https://hydra.cc/docs/intro)以了解更多。
+训练完成模型保存在，是一个ckpt文件:
+```angular2html
+outputs/2021-11-02/12-00-04/wandb/run-20211102_120006-1ksnqcgn/files/image-to-latex/1ksnqcgn/checkpoints/epoch=13-val/loss=0.12-val/cer=0.06.ckpt
+```
 
 #### 使用权重和偏差进行实验跟踪
 
