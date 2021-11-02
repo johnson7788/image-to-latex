@@ -5,9 +5,8 @@ from pathlib import Path
 
 import wandb
 
-
 def download_checkpoint(run_path: str) -> None:
-    """Download model checkpoint from Weights & Biases.
+    """从wandb下载模型 checkpoint from Weights & Biases.
 
     Args:
         run_path: The run path for a run, in the format of
@@ -28,11 +27,11 @@ def download_checkpoint(run_path: str) -> None:
 
     wandb_file = checkpoint_wandb_files[0]
     with tempfile.TemporaryDirectory() as tmp_dirname:
-        print("Downloading model checkpoint...")
+        print("正在下载模型 checkpoint...")
         wandb_file.download(root=tmp_dirname, replace=True)
         checkpoint_filename = f"{tmp_dirname}/{wandb_file.name}"
         shutil.copyfile(src=checkpoint_filename, dst=artifacts_dirname / "model.pt")
-    print(f"Model checkpoint downloaded to {str(artifacts_dirname / 'model.pt')}.")
+    print(f"模型 checkpoint 下载到 {str(artifacts_dirname / 'model.pt')}.")
 
 
 def main() -> None:

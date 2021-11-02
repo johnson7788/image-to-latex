@@ -9,8 +9,8 @@ from image_to_latex.lit_models import LitResNetTransformer
 
 
 app = FastAPI(
-    title="Image to Latex Convert",
-    desription="Convert an image of math equation into LaTex code.",
+    title="图片到Latext的转换",
+    desription="转换一个数学公式图片到LaText的格式",
 )
 
 

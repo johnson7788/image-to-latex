@@ -117,13 +117,13 @@ class Tokenizer:
         self.ignore_indices = {self.pad_index, self.sos_index, self.eos_index, self.unk_index}
 
     def _add_token(self, token: str) -> int:
-        """Add one token to the vocabulary.
+        """添加一个 token到单词表.
 
         Args:
             token: The token to be added.
 
         Returns:
-            The index of the input token.
+            返回输入的token的index.
         """
         if token in self.token_to_index:
             return self.token_to_index[token]
@@ -199,7 +199,7 @@ class Tokenizer:
 
 
 def get_all_formulas(filename: Path) -> List[List[str]]:
-    """Returns all the formulas in the formula file."""
+    """返回所有的公式，从公式文件中读取"""
     with open(filename) as f:
         all_formulas = [formula.strip("\n").split() for formula in f.readlines()]
     return all_formulas
@@ -232,35 +232,36 @@ def first_and_last_nonzeros(arr):
 
 
 def crop(filename: Path, padding: int = 8) -> Optional[Image.Image]:
+    # 使用Pillow打开图片
     image = pil_loader(filename, mode="RGBA")
 
-    # Replace the transparency layer with a white background
+    # 替换透明层为白色背景
     new_image = Image.new("RGBA", image.size, "WHITE")
     new_image.paste(image, (0, 0), image)
     new_image = new_image.convert("L")
 
-    # Invert the color to have a black background and white text
+    # 转换成黑色背景和白色文字
     arr = 255 - np.array(new_image)
 
-    # Area that has text should have nonzero pixel values
+    # 有文字的地方应该也有像素值
     row_sums = np.sum(arr, axis=1)
     col_sums = np.sum(arr, axis=0)
     y_start, y_end = first_and_last_nonzeros(row_sums)
     x_start, x_end = first_and_last_nonzeros(col_sums)
 
-    # Some images have no text
+    #一些图片没有text
     if y_start >= y_end or x_start >= x_end:
-        print(f"{filename.name} is ignored because it does not contain any text")
+        print(f"{filename.name} 会被忽略掉，因为它不包含任何文字")
         return None
 
-    # Cropping
+    # 开始裁剪
     cropped = arr[y_start : y_end + 1, x_start : x_end + 1]
     H, W = cropped.shape
 
-    # Add paddings
+    # 添加 paddings
     new_arr = np.zeros((H + padding * 2, W + padding * 2))
     new_arr[padding : H + padding, padding : W + padding] = cropped
 
-    # Invert the color back to have a white background and black text
+    # 转换回颜色为白色背景和黑色文字
     new_arr = 255 - new_arr
     return Image.fromarray(new_arr).convert("L")

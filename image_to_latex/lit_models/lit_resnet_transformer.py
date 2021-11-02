@@ -9,7 +9,6 @@ from ..data.utils import Tokenizer
 from ..models import ResNetTransformer
 from .metrics import CharacterErrorRate
 
-
 class LitResNetTransformer(LightningModule):
     def __init__(
         self,

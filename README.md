@@ -174,6 +174,19 @@ make streamlit
 make docker
 ```
 
+## 训练数据
+```bash
+.
+├── formula_images    #原始的公式图像
+├── formula_images.tar.gz    #压缩包，解压后得到formula_images
+├── formula_images_processed  # 经过处理后的公式图像，去掉没用的像素，
+├── im2latex_formulas.norm.lst #原始的图像对应的latex的公式TXT文件
+├── im2latex_formulas.norm.new.lst  #经过scripts下的find_and_replace.sh替换后
+├── im2latex_test_filter.lst  #格式是 图像名称 对应的im2latex_formulas.norm.new.lst中的latex的公式的行数，
+├── im2latex_train_filter.lst
+└── im2latex_validate_filter.lst  # 例如5abbb9b19f.png 0，代表这里面的formula_images_processed/5abbb9b19f.png 图像对应的latext是im2latex_formulas.norm.new.lst 第0行
+```
+
 ## Acknowledgement
 
 - This project is inspired by the project ideas section in the [final project guidelines](https://docs.google.com/document/d/1pXPJ79cQeyDk3WdlYipA6YbbcoUhIVURqan_INdjjG4/edit) of the course [Full Stack Deep Learning](https://fullstackdeeplearning.com/) at UC Berkely. Some of the code is adopted from its [labs](https://github.com/full-stack-deep-learning/fsdl-text-recognizer-2021-labs/tree/main).
