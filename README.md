@@ -163,10 +163,10 @@ make lint
 ```
 make api
 或者
-uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload --reload-dir image_to_latex --reload-dir api
+uvicorn api.app:app --host 0.0.0.0 --port 7800 --reload --reload-dir image_to_latex --reload-dir api
 ```
 
-你可以通过生成的文档（http://0.0.0.0:8000/docs）探索该API。
+你可以通过生成的文档（http://0.0.0.0:7800/docs）探索该API。
 要运行Streamlit应用程序，创建一个新的终端窗口并使用以下命令。
 ```
 make streamlit

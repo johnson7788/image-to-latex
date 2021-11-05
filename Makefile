@@ -40,13 +40,13 @@ lint:
 # API
 .PHONY: api
 api:
-	uvicorn api.app:app --host 0.0.0.0 --port 8000 --reload --reload-dir image_to_latex --reload-dir api
+	uvicorn api.app:app --host 0.0.0.0 --port 7800 --reload --reload-dir image_to_latex --reload-dir api
 
 # Docker
 .PHONY: docker
 docker:
 	docker build -t image-to-latex:latest -f api/Dockerfile .
-	docker run -p 8000:8000 --name image-to-latex image-to-latex:latest
+	docker run -p 7800:7800 --name image-to-latex image-to-latex:latest
 
 # Streamlit
 .PHONY: streamlit
